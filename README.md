@@ -1,67 +1,56 @@
 # NBA Task Queue Deployment
 
-> Code and Structure to deploy scripts and tasks within a task queue paradigm and data pipeline.
+Historical design sketch for a Celery/RabbitMQ NBA task service.
 
-I need a application structure setup which uses celery + RabbitMQ for task distribution and workers management. I have a web application that uses machine learning and deep learning algorithms to do predictions from NBA. These predictive models are deployed on this server as python modules and their predictive functions are integrated with celery as individual task workers.
+## Project status
 
-For example, X (user) wants to know predict the range of a players score for an upcoming game and submits query to the web application. The web application will initiate celery tasks with X's query payload. its a pipeline of requests and task where Celery tasks after performing certain operations submits to another Celery task which runs the machine learning / deep learning's ML function, and then the web application starts waiting for the Celery server tasks to be completed and response to be received.
+This design is **superseded and not deployable**. The repository contains no runnable worker,
+broker configuration, dependency definition, tests, task contracts, or operations controls. Its
+empty script placeholders should not be treated as an implementation.
 
-## Features
+The current NBA API intentionally uses a request-driven runtime without Celery or RabbitMQ. Keep
+interactive reads synchronous and serve precomputed predictions. Run ingestion, transformation,
+training, and evaluation as bounded offline jobs. Introduce a durable asynchronous API only after a
+measured workload and an explicit reliability contract justify it.
 
-- [Celery](https://docs.celeryproject.org/en/stable/index.html) is a simple, flexible, and reliable distributed system to process vast amounts of messages, while providing operations with the tools required to maintain such a system.
-- [RabbitMQ](https://www.rabbitmq.com/) is the most widely deployed open source message broker.
+See [`docs/architecture-investigation.md`](docs/architecture-investigation.md) for the evidence,
+replacement architecture, and reactivation criteria.
 
-### Workings
+## Decision summary
 
-Data-heavy tasks, like the NBA machine learning models we use or the automated scraping and cleaning of fresh data, may take many seconds or even minutes to complete. This leads to X (user) having to wait for the result and we assume most users want a pretty streamlined experience.
+- Do not deploy this repository.
+- Do not make an HTTP request wait for a worker result.
+- Do not use a task result backend as the canonical model-output store.
+- Do not add RabbitMQ/Celery merely because a task is described as “data-heavy.”
+- Recommend archiving the GitHub repository after this decision is merged and linked from active
+  project documentation. Archiving is a separate owner action, not part of this pull request.
 
-i want to add a layer where our api server takes requests gives automatic feedback to the user that we are currently processing their request. There are a couple of ways to creating these systems to create these instant feedback experiences; I've chosen to create the task server using is Celery and it’s platform.
+## Replacement approach
 
-With Celery you can run different tasks simultaneously using the main process, and while you do your job, Celery will complete the smaller tasks at hand. You can set up queues, work with data chunks on long-running tasks, and set up times for your tasks to be executed. Tasks can do whatever we program them to do, update the db, run a corn job to check the servers status, and what we are aiming for ... running our ML model functions.
+1. Precompute model predictions and publish versioned outputs to PostgreSQL.
+2. Run acquisition and training as scheduled, bounded commands outside the API request path.
+3. Keep the first job implementation with the active API repository so code, migrations, tests, and
+   releases stay aligned.
+4. If a user-triggered operation genuinely cannot finish within the latency budget, return
+   `202 Accepted` with a durable job identifier and status resource.
+5. Add a worker/queue only when rate, duration, concurrency, retry, and ownership evidence chooses
+   it over a simpler mechanism.
 
-You use Celery to accomplish a few main goals:
+The active service is
+[`awesome-nba-data-api`](https://github.com/JovaniPink/awesome-nba-data-api). Historical notebooks
+and data artifacts live in [`nba-data`](https://github.com/JovaniPink/nba-data), which is also not a
+runtime dependency.
 
-• Define independent tasks that your workers can do as a Python function.
-• These tasks are published to a broker we'll be using RabbitMQ
-• Celery listens to a message broker (RabbitMQ) to get new task requests.
-• Then assigns those requests to workers to complete the task which celery handles.
-• We monitor the progress and status of tasks and workers by having the Web Application (Flask) subscribe to the celery updates.
-• The the finalized task results are inserted into our PostgreSQL result backend.
+## If this design is ever reactivated
 
-#### Defined Terms
-
-Broker
-The Broker (RabbitMQ) is responsible for the creation of task queues, dispatching tasks to task queues according to some routing rules, and then delivering tasks from task queues to workers.
-
-Consumer
-The Consumer (Celery Workers) is the one or multiple Celery workers executing the tasks. You could start many workers depending on your use case.
-
-Result Backend
-The Result Backend is used for storing the results of your tasks. However, it is not a required element, so if you do not include it in your settings, you cannot access the results of your tasks.
-
-## Installation
-
-### Running the unit tests on scripts
-
-### Starting a Worker Process
-
-### Starting the Web Scraping Process
-
-### Starting the ETL Process
-
-## Example
-
-## Todo Checklist
-
-A helpful checklist to gauge how your README is coming on what I would like to finish:
-
-- [ ] ?
+The implementation must define idempotency, at-least-once delivery behavior, acknowledgements,
+timeouts, bounded retries with backoff, dead-letter handling, cancellation, result retention,
+observability, deployment ownership, and recovery tests before it can be described as reliable.
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
+This repository accepts corrections to the historical decision record. New runtime code belongs in
+the active service until the reactivation criteria establish a justified independent service.
 
 ## License
 
