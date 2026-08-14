@@ -2,6 +2,10 @@
 
 _Reviewed: 2026-08-11_
 
+> **Archive decision completed August 13, 2026.** The replacements are
+> [awesome-nba-data](https://github.com/JovaniPink/awesome-nba-data) and the private
+> [nba-lab](https://github.com/JovaniPink/nba-lab). This document is a historical design record.
+
 ## Decision
 
 Do not implement or deploy the proposed standalone Celery/RabbitMQ service. Mark this repository as
@@ -71,8 +75,7 @@ web request
   -> return immediately with freshness/model metadata
 ```
 
-Keep the first batch commands in the active API repository as a distinct package and execution
-entrypoint. This gives them the same migrations, fixtures, CI, dependency updates, and release
+Keep bounded batch commands with NBA Lab. This gives them the same contracts, fixtures, CI, and
 review without coupling execution to HTTP handlers.
 
 ## Escalation ladder
@@ -112,16 +115,14 @@ baseline and current official documentation rather than reviving the empty place
 
 ## Cross-repository consequence
 
-The active `awesome-nba-data-api` repository recently removed its unused Celery runtime and states
-that asynchronous processing requires a concrete contract. Reintroducing the same speculative
-dependency through a separate repository would recreate the coupling while splitting tests and
-ownership. The two architecture decisions should remain aligned.
+NBA Lab intentionally omits Celery and RabbitMQ. Reintroducing the same speculative dependency
+through a separate repository would recreate coupling while splitting tests and ownership.
 
 ## Archive procedure
 
-After this documentation is accepted:
+Completed August 13, 2026:
 
-1. link the decision from the active API documentation;
+1. link the decision from the replacement documentation;
 2. confirm no deployment, package, automation, or repository depends on this project;
 3. preserve the repository history;
 4. archive the GitHub repository through an explicit owner action.
